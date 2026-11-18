@@ -11,11 +11,12 @@ import { Icon } from '../../components/Icon';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';
+import type { MainTabScreenProps } from '../../navigation/types';
 import { colors, radius, spacing, typography } from '../../theme';
 import { AccountCard } from './components/AccountCard';
 import { SettingSwitchRow } from './components/SettingSwitchRow';
 
-export function SettingsScreen() {
+export function SettingsScreen({ navigation }: MainTabScreenProps<'Settings'>) {
   const { me, showOnline, setShowOnline, logout } = useAuth();
   const { enabled, setEnabled } = useNotifications();
 
@@ -42,6 +43,15 @@ export function SettingsScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         <ScreenHeader title="Cài đặt" />
         <AccountCard me={me} online={showOnline} />
+        {/* Mở màn sửa họ tên và ảnh đại diện. */}
+        <TouchableOpacity
+          accessibilityRole="button"
+          style={styles.editProfile}
+          onPress={() => navigation.navigate('EditProfile')}
+        >
+          <Icon name="user" size={18} color={colors.primary} />
+          <Text style={styles.editProfileText}>Sửa hồ sơ</Text>
+        </TouchableOpacity>
         <Text style={styles.sectionLabel}>Tuỳ chọn</Text>
         <View style={styles.card}>
           <SettingSwitchRow
@@ -55,7 +65,7 @@ export function SettingsScreen() {
           <SettingSwitchRow
             icon="bell"
             label="Nhận thông báo"
-            description="Hiện số thông báo mới trên thanh tab"
+            description="Hiện số thông báo mới và thông báo hệ thống khi app chạy nền"
             value={enabled}
             onValueChange={setEnabled}
           />
@@ -75,6 +85,22 @@ export function SettingsScreen() {
 }
 
 const styles = StyleSheet.create({
+  editProfile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    minHeight: 44,
+    marginTop: spacing.md,
+    marginHorizontal: spacing.lg,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primarySoft,
+  },
+  editProfileText: {
+    ...typography.name,
+    fontSize: 14,
+    color: colors.primary,
+  },
   container: {
     flex: 1,
     backgroundColor: colors.background,

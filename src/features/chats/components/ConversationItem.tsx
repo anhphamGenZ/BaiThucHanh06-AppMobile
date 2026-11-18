@@ -1,30 +1,40 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { Avatar } from '../../../components/Avatar';
 import { HighlightText } from '../../../components/HighlightText';
-import { Icon } from '../../../components/Icon';
 import { PressableScale } from '../../../components/PressableScale';
 import { colors, radius, spacing, typography } from '../../../theme';
-import type { Conversation, User } from '../../../types/models';
+import type { UserChat } from '../../../types/models';
 import { formatTime } from '../../../utils/formatTime';
 import { UnreadBadge } from './UnreadBadge';
 
-// Trùng với chuỗi chatService ghi vào lastMessage khi gửi vị trí.
-const LOCATION_PREVIEW = '📍 Vị trí';
-
 type ConversationItemProps = {
-  user: User;
-  conversation: Conversation;
-  isMine: boolean;
+  // Tên người kia (chat 1-1) hoặc tên nhóm.
+  title: string;
+  // Chuỗi cố định để chọn màu avatar (uid hoặc mã nhóm).
+  avatarSeed: string;
+  // Ảnh đại diện người kia (chat 1-1); nhóm không có ảnh.
+  avatarUri?: string;
+  // Chấm xanh: người kia online, hoặc trong nhóm có người online.
+  online: boolean;
+  isGroup: boolean;
+  conversation: UserChat;
+  // Tiền tố trước tin cuối: "Bạn: " hoặc tên người gửi trong nhóm ("An: ").
+  senderPrefix: string;
   onPress: () => void;
   query?: string;
   isFirst?: boolean;
   isLast?: boolean;
 };
 
+// Một dòng ở Home: avatar, tên, tin cuối, thời gian, số chưa đọc.
 export function ConversationItem({
-  user,
+  title,
+  avatarSeed,
+  avatarUri,
+  online,
+  isGroup,
   conversation,
-  isMine,
+  senderPrefix,
   onPress,
   query = '',
   isFirst = false,
@@ -32,18 +42,21 @@ export function ConversationItem({
 }: ConversationItemProps) {
   const unread = conversation.unread;
   const hasUnread = unread > 0;
-  const isLocation = conversation.lastMessage === LOCATION_PREVIEW;
-  const preview = isLocation ? 'Đã chia sẻ vị trí' : conversation.lastMessage;
-  const time = formatTime(conversation.lastTime);
+  // lastMessage đã là chuỗi xem trước theo loại tin: "📷 Hình ảnh", "📍 Vị trí", nội dung chữ...
+  const preview = conversation.lastMessage;
+  const isRecalled = conversation.lastType === 'recalled';
+  // Tin hệ thống ("A đã tạo nhóm") đã có tên người làm nên không thêm tiền tố.
+  const prefix = conversation.lastType === 'system' ? '' : senderPrefix;
+  const time = formatTime(conversation.updatedAt);
 
   return (
     <PressableScale
       accessibilityRole="button"
       accessibilityLabel={[
-        `Trò chuyện với ${user.name}`,
-        user.isOnline ? 'đang hoạt động' : null,
+        isGroup ? `Nhóm ${title}` : `Trò chuyện với ${title}`,
+        online ? 'đang hoạt động' : null,
         hasUnread ? `${unread} tin chưa đọc` : null,
-        `${isMine ? 'Bạn: ' : ''}${preview}`,
+        `${prefix}${preview}`,
         time,
       ]
         .filter(Boolean)
@@ -59,29 +72,29 @@ export function ConversationItem({
     >
       {hasUnread && <View style={styles.signal} />}
       <Avatar
-        name={user.name}
-        seed={user.id}
+        name={title}
+        seed={avatarSeed}
+        uri={avatarUri}
         size={52}
-        online={user.isOnline}
+        online={online}
       />
       <View style={styles.middle}>
         <HighlightText
-          text={user.name}
+          text={title}
           query={query}
           style={[styles.name, hasUnread && styles.nameUnread]}
           numberOfLines={1}
         />
         <View style={styles.previewRow}>
-          {isMine && <Text style={styles.mine}>Bạn: </Text>}
-          {isLocation && (
-            <View style={styles.pin}>
-              <Icon name="mapPin" size={13} color={colors.primary} />
-            </View>
-          )}
+          {prefix !== '' && <Text style={styles.mine}>{prefix}</Text>}
           <HighlightText
             text={preview}
-            query={isLocation ? '' : query}
-            style={[styles.message, hasUnread && styles.messageUnread]}
+            query={query}
+            style={[
+              styles.message,
+              hasUnread && styles.messageUnread,
+              isRecalled && styles.messageRecalled,
+            ]}
             numberOfLines={1}
           />
         </View>
@@ -146,9 +159,6 @@ const styles = StyleSheet.create({
     ...typography.bodyMuted,
     fontWeight: '600',
   },
-  pin: {
-    marginRight: 3,
-  },
   message: {
     ...typography.bodyMuted,
     flexShrink: 1,
@@ -156,6 +166,9 @@ const styles = StyleSheet.create({
   messageUnread: {
     color: colors.text,
     fontWeight: '600',
+  },
+  messageRecalled: {
+    fontStyle: 'italic',
   },
   right: {
     alignItems: 'flex-end',

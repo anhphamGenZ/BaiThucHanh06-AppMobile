@@ -32,7 +32,14 @@ export function OnlineStrip({ users, onOpen }: OnlineStripProps) {
             style={styles.item}
             onPress={() => onOpen(item.id)}
           >
-            <Avatar name={item.name} seed={item.id} size={52} online ring />
+            <Avatar
+              name={item.name}
+              seed={item.id}
+              uri={item.avatarUrl}
+              size={52}
+              online
+              ring
+            />
             <Text style={styles.name} numberOfLines={1}>
               {givenName(item.name)}
             </Text>

@@ -18,8 +18,8 @@ import {
   type AuthUser,
 } from '../services/authService';
 import {
-  pauseConnection,
-  resumeConnection,
+  setOffline,
+  setOnline,
   startPresence,
 } from '../services/presenceService';
 import { subscribeMyProfile } from '../services/userService';
@@ -74,7 +74,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return;
     }
     return subscribeMyProfile(uid, profile =>
-      setMe({ id: uid, email, name: profile?.name ?? '' }),
+      setMe({
+        id: uid,
+        email,
+        name: profile?.name ?? '',
+        avatarUrl: profile?.avatarUrl,
+      }),
     );
   }, [uid, email]);
 
@@ -110,25 +115,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return startPresence(uid, showOnline);
   }, [uid, prefReady, showOnline]);
 
-  // Ở nền quá 5 giây thì ngắt kết nối để server ghi offline (onDisconnect); quay lại thì nối lại.
+  // Ở nền quá 5 giây thì ghi offline (người khác thấy "Hoạt động X phút trước") nhưng GIỮ kết nối,
+  // để app vẫn nhận thông báo mới và hiện thông báo hệ thống bằng notifee. Quay lại thì ghi online.
+  // Khi app bị tắt hẳn, onDisconnect trên server vẫn tự ghi offline như cũ.
   useEffect(() => {
     if (!uid) {
       return;
     }
     let timer: ReturnType<typeof setTimeout> | undefined;
+    let wentOffline = false;
     const subscription = AppState.addEventListener('change', state => {
       if (state === 'background') {
-        timer = setTimeout(pauseConnection, 5000);
+        timer = setTimeout(() => {
+          wentOffline = true;
+          setOffline(uid).catch(() => {});
+        }, 5000);
       } else if (state === 'active') {
         clearTimeout(timer);
-        resumeConnection();
+        if (wentOffline && showOnline) {
+          setOnline(uid).catch(() => {});
+        }
+        wentOffline = false;
       }
     });
     return () => {
       subscription.remove();
       clearTimeout(timer);
     };
-  }, [uid]);
+  }, [uid, showOnline]);
 
   const setShowOnline = useCallback(
     (visible: boolean) => {

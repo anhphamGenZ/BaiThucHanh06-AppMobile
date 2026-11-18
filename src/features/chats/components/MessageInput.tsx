@@ -12,21 +12,29 @@ import { colors, radius, shadowGlow, spacing } from '../../../theme';
 type MessageInputProps = {
   onSend: (text: string) => void;
   onSendLocation: () => void;
+  // Mở lựa chọn "Chụp ảnh" / "Chọn từ thư viện".
+  onPickImage: () => void;
   locating: boolean;
+  // Gọi mỗi khi nội dung ô nhập đổi, để bật/tắt "đang soạn tin".
+  onTyping?: (text: string) => void;
 };
 
+// Thanh nhập tin: [vị trí] [ảnh] [ô nhập] [gửi].
 export function MessageInput({
   onSend,
   onSendLocation,
+  onPickImage,
   locating,
+  onTyping,
 }: MessageInputProps) {
   const [text, setText] = useState('');
   const canSend = text.trim().length > 0;
 
   return (
     <View style={styles.container}>
+      {/* Gửi vị trí: hiện vòng loading trong lúc lấy toạ độ GPS. */}
       <TouchableOpacity
-        style={styles.location}
+        style={styles.tool}
         disabled={locating}
         accessibilityRole="button"
         accessibilityLabel="Gửi vị trí"
@@ -38,16 +46,32 @@ export function MessageInput({
           <Icon name="mapPin" size={22} color={colors.primary} />
         )}
       </TouchableOpacity>
+
+      {/* Gửi ảnh: chụp mới hoặc chọn từ thư viện. */}
+      <TouchableOpacity
+        style={styles.tool}
+        accessibilityRole="button"
+        accessibilityLabel="Gửi ảnh"
+        onPress={onPickImage}
+      >
+        <Icon name="camera" size={22} color={colors.primary} />
+      </TouchableOpacity>
+
       <TextInput
         style={styles.input}
         value={text}
-        onChangeText={setText}
+        onChangeText={next => {
+          setText(next);
+          onTyping?.(next);
+        }}
         multiline
         maxLength={1000}
         placeholder="Nhập tin nhắn..."
         placeholderTextColor={colors.textMuted}
         accessibilityLabel="Ô nhập tin nhắn"
       />
+
+      {/* Gửi tin chữ rồi xoá ô nhập. */}
       <TouchableOpacity
         style={[styles.send, canSend ? styles.sendActive : styles.sendIdle]}
         disabled={!canSend}
@@ -87,7 +111,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.text,
   },
-  location: {
+  tool: {
     width: 44,
     height: 44,
     borderRadius: 22,

@@ -16,7 +16,11 @@ export type RootStackParamList = {
   Login: undefined;
   Register: undefined;
   MainTabs: NavigatorScreenParams<MainTabParamList>;
-  ChatDetail: { peerId: string };
+  // convId luôn có; peerId chỉ truyền với chat 1-1.
+  ChatDetail: { convId: string; peerId?: string };
+  CreateGroup: undefined;
+  GroupInfo: { convId: string };
+  EditProfile: undefined;
 };
 
 export type RootStackScreenProps<T extends keyof RootStackParamList> =

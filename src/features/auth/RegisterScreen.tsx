@@ -14,7 +14,12 @@ import { AuthTextField } from './components/AuthTextField';
 type Field = 'name' | 'email' | 'password' | 'confirm';
 type FieldErrors = Record<Field, string>;
 
-const NO_ERRORS: FieldErrors = { name: '', email: '', password: '', confirm: '' };
+const NO_ERRORS: FieldErrors = {
+  name: '',
+  email: '',
+  password: '',
+  confirm: '',
+};
 
 export function RegisterScreen({
   navigation,
@@ -72,11 +77,12 @@ export function RegisterScreen({
     }
   };
 
-  const change = (field: Field, set: (text: string) => void) => (text: string) => {
-    set(text);
-    setErrors(prev => ({ ...prev, [field]: '' }));
-    setFormError('');
-  };
+  const change =
+    (field: Field, set: (text: string) => void) => (text: string) => {
+      set(text);
+      setErrors(prev => ({ ...prev, [field]: '' }));
+      setFormError('');
+    };
 
   return (
     <AuthLayout title="Tạo tài khoản">
@@ -130,7 +136,11 @@ export function RegisterScreen({
         onSubmitEditing={handleRegister}
       />
       <AuthFormError message={formError} />
-      <AuthButton label="Đăng ký" loading={submitting} onPress={handleRegister} />
+      <AuthButton
+        label="Đăng ký"
+        loading={submitting}
+        onPress={handleRegister}
+      />
       <AuthSwitchLink
         prompt="Đã có tài khoản?"
         action="Đăng nhập"

@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 import { avatarPalette, colors } from '../theme';
 import { PulseDot } from './PulseDot';
@@ -6,6 +6,8 @@ import { PulseDot } from './PulseDot';
 type AvatarProps = {
   name: string;
   seed: string;
+  // Ảnh đại diện; không có thì hiện chữ cái đầu trên nền màu theo seed.
+  uri?: string;
   size?: number;
   online?: boolean;
   // Chấm online có hiệu ứng pulse (chỉ dùng vài chỗ, không dùng cho cả danh sách).
@@ -35,6 +37,7 @@ function initialOf(name: string): string {
 export function Avatar({
   name,
   seed,
+  uri,
   size = 48,
   online,
   pulse = false,
@@ -76,21 +79,29 @@ export function Avatar({
           ring && styles.ringInset,
         ]}
       >
-        <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
-          <Defs>
-            <LinearGradient id="gloss" x1="0" y1="0" x2="0.8" y2="1">
-              <Stop offset="0" stopColor={colors.white} stopOpacity={0.3} />
-              <Stop offset="0.6" stopColor={colors.white} stopOpacity={0} />
-            </LinearGradient>
-          </Defs>
-          <Circle cx={half} cy={half} r={half} fill="url(#gloss)" />
-        </Svg>
-        <Text
-          style={[styles.initial, { fontSize: size * 0.42 }]}
-          allowFontScaling={false}
-        >
-          {initialOf(name)}
-        </Text>
+        {uri ? (
+          // Có ảnh đại diện: ảnh phủ kín vòng tròn.
+          <Image source={{ uri }} style={{ width: size, height: size }} />
+        ) : (
+          // Không có ảnh: lớp bóng nhẹ + chữ cái đầu.
+          <>
+            <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
+              <Defs>
+                <LinearGradient id="gloss" x1="0" y1="0" x2="0.8" y2="1">
+                  <Stop offset="0" stopColor={colors.white} stopOpacity={0.3} />
+                  <Stop offset="0.6" stopColor={colors.white} stopOpacity={0} />
+                </LinearGradient>
+              </Defs>
+              <Circle cx={half} cy={half} r={half} fill="url(#gloss)" />
+            </Svg>
+            <Text
+              style={[styles.initial, { fontSize: size * 0.42 }]}
+              allowFontScaling={false}
+            >
+              {initialOf(name)}
+            </Text>
+          </>
+        )}
       </View>
       {online !== undefined && (
         <View style={[styles.dotWrap, ring && styles.dotWrapRing]}>

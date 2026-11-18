@@ -14,10 +14,6 @@ function startOfDay(date: Date): number {
   ).getTime();
 }
 
-export function minutesAgo(minutes: number): string {
-  return new Date(Date.now() - minutes * MINUTE).toISOString();
-}
-
 export function formatClock(value: string | number): string {
   const date = new Date(value);
   return `${pad(date.getHours())}:${pad(date.getMinutes())}`;

@@ -26,6 +26,9 @@ export const colors = {
   bubbleMineMeta: '#CDEBEB',
   bubbleOther: '#FFFFFF',
   white: '#FFFFFF',
+  black: '#000000',
+  // Lớp phủ mờ sau menu, ảnh đang tải.
+  overlay: 'rgba(17,24,39,0.4)',
 };
 
 export const spacing = {

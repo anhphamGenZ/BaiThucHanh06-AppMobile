@@ -1,5 +1,6 @@
 import { StyleSheet, Text, type StyleProp, type TextStyle } from 'react-native';
 import { colors } from '../theme';
+import { foldText } from '../utils/textSearch';
 
 type HighlightTextProps = {
   text: string;
@@ -8,15 +9,16 @@ type HighlightTextProps = {
   numberOfLines?: number;
 };
 
-// Tô đậm đoạn khớp từ khoá (không phân biệt hoa thường), giống cách lọc danh sách.
+// Tô đậm đoạn khớp từ khoá, không phân biệt hoa thường và dấu tiếng Việt.
 export function HighlightText({
   text,
   query,
   style,
   numberOfLines,
 }: HighlightTextProps) {
-  const needle = query.trim().toLowerCase();
-  const start = needle ? text.toLowerCase().indexOf(needle) : -1;
+  // foldText giữ nguyên độ dài chuỗi nên vị trí khớp dùng được để cắt chuỗi gốc.
+  const needle = foldText(query.trim());
+  const start = needle ? foldText(text).indexOf(needle) : -1;
 
   if (start < 0) {
     return (

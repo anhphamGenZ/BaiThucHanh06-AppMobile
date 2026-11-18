@@ -19,23 +19,95 @@ jest.mock('./src/services/authService', () => ({
 jest.mock('./src/services/userService', () => ({
   subscribeUsers: jest.fn(() => () => {}),
   subscribeMyProfile: jest.fn(() => () => {}),
+  updateProfile: jest.fn(() => Promise.resolve()),
+}));
+
+jest.mock('./src/services/localNotificationService', () => ({
+  setupLocalNotifications: jest.fn(() => Promise.resolve()),
+  showLocalNotification: jest.fn(() => Promise.resolve()),
+  handleBackgroundEvent: jest.fn(() => Promise.resolve()),
+  onOpenFromNotification: jest.fn(() => () => {}),
 }));
 
 jest.mock('./src/services/presenceService', () => ({
   startPresence: jest.fn(() => () => {}),
   setOffline: jest.fn(() => Promise.resolve()),
-  pauseConnection: jest.fn(),
-  resumeConnection: jest.fn(),
+  setOnline: jest.fn(() => Promise.resolve()),
   subscribeStatuses: jest.fn(() => () => {}),
+  trackActiveConv: jest.fn(() => () => {}),
 }));
 
 jest.mock('./src/services/chatService', () => ({
-  getChatId: jest.fn((a, b) => [a, b].sort().join('_')),
+  PAGE_SIZE: 20,
+  LOCATION_PREVIEW: '📍 Vị trí',
+  IMAGE_PREVIEW: '📷 Hình ảnh',
+  RECALLED_TEXT: 'Tin nhắn đã được thu hồi',
+  REACTIONS: ['👍', '❤️', '😂', '😮', '😢'],
+  getDirectId: jest.fn((a, b) => [a, b].sort().join('_')),
+  directPeerOf: jest.fn(() => null),
+  openDirect: jest.fn((a, b) => Promise.resolve([a, b].sort().join('_'))),
+  subscribeConversation: jest.fn(() => () => {}),
   sendText: jest.fn(() => Promise.resolve()),
   sendLocation: jest.fn(() => Promise.resolve()),
-  subscribeMessages: jest.fn(() => () => {}),
+  sendImage: jest.fn(() => Promise.resolve()),
+  sendSystemMessage: jest.fn(() => Promise.resolve()),
+  previewOf: jest.fn(() => ''),
+  fetchAllMessages: jest.fn(() => Promise.resolve([])),
+  subscribeLatest: jest.fn(() => () => {}),
+  loadOlder: jest.fn(() => Promise.resolve([])),
+  subscribeChangesFrom: jest.fn(() => () => {}),
   subscribeUserChats: jest.fn(() => () => {}),
   markRead: jest.fn(() => Promise.resolve()),
+  subscribeReadStatus: jest.fn(() => () => {}),
+  recallMessage: jest.fn(() => Promise.resolve()),
+  toggleReaction: jest.fn(() => Promise.resolve()),
+}));
+
+jest.mock('./src/services/groupService', () => ({
+  MIN_GROUP_PICK: 2,
+  createGroup: jest.fn(() => Promise.resolve('group-id')),
+  renameGroup: jest.fn(() => Promise.resolve()),
+  addMembers: jest.fn(() => Promise.resolve()),
+  removeMember: jest.fn(() => Promise.resolve()),
+  leaveGroup: jest.fn(() => Promise.resolve()),
+}));
+
+jest.mock('./src/services/notificationService', () => ({
+  getActiveConvs: jest.fn(() => Promise.resolve({})),
+  messageNotificationUpdates: jest.fn(() => ({})),
+  newNotificationUpdate: jest.fn(() => ({})),
+  subscribeNotifications: jest.fn(() => () => {}),
+  markNotificationRead: jest.fn(() => Promise.resolve()),
+  markAllNotificationsRead: jest.fn(() => Promise.resolve()),
+}));
+
+jest.mock('./src/services/uploadService', () => ({
+  uploadImage: jest.fn(() =>
+    Promise.resolve('https://res.cloudinary.com/demo/image/upload/x.jpg'),
+  ),
+}));
+
+jest.mock('./src/services/imagePickerService', () => ({
+  CameraPermissionError: class CameraPermissionError extends Error {
+    constructor(blocked) {
+      super('camera-permission');
+      this.blocked = blocked;
+    }
+  },
+  pickImage: jest.fn(() => Promise.resolve(null)),
+}));
+
+jest.mock('./src/services/typingService', () => ({
+  setTyping: jest.fn(() => Promise.resolve()),
+  subscribeTyping: jest.fn(() => () => {}),
+}));
+
+jest.mock('@react-native-clipboard/clipboard', () => ({
+  __esModule: true,
+  default: {
+    setString: jest.fn(),
+    getString: jest.fn(() => Promise.resolve('')),
+  },
 }));
 
 jest.mock('./src/services/locationService', () => ({

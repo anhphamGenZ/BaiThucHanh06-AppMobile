@@ -8,6 +8,7 @@
         ".write": "auth != null && auth.uid === $uid",
         ".validate": "newData.hasChildren(['name'])",
         "name": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 50" },
+        "avatarUrl": { ".validate": "newData.isString() && newData.val().beginsWith('https://res.cloudinary.com/') && newData.val().length <= 500" },
         "$other": { ".validate": false }
       }
     },
@@ -21,21 +22,68 @@
         "$other": { ".validate": false }
       }
     },
+    "conversations": {
+      "$c": {
+        ".read": "auth != null && (data.child('members').child(auth.uid).exists() || (!data.exists() && ($c.beginsWith(auth.uid + '_') || $c.endsWith('_' + auth.uid))))",
+        ".write": "auth != null && !data.exists() && newData.child('createdBy').val() === auth.uid && newData.child('members').child(auth.uid).val() === true",
+        ".validate": "newData.hasChildren(['type', 'members', 'createdBy', 'createdAt']) && (newData.child('type').val() !== 'direct' || ($c.matches(/^[A-Za-z0-9]+_[A-Za-z0-9]+$/) && ($c.beginsWith(auth.uid + '_') || $c.endsWith('_' + auth.uid)) && $c !== auth.uid + '_' + auth.uid && newData.child('members').child($c.replace(auth.uid + '_', '').replace('_' + auth.uid, '')).val() === true)) && (newData.child('type').val() !== 'group' || newData.hasChild('name'))",
+        "type":      { ".validate": "newData.val() === 'direct' || newData.val() === 'group'" },
+        "name": {
+          ".write": "auth != null && data.parent().child('type').val() === 'group' && data.parent().child('members').child(auth.uid).exists()",
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 50"
+        },
+        "createdBy": { ".validate": "newData.isString()" },
+        "createdAt": { ".validate": "newData.val() === now || newData.val() === data.val()" },
+        "members": {
+          "$m": {
+            ".write": "auth != null && data.parent().parent().child('type').val() === 'group' && (data.parent().parent().child('createdBy').val() === auth.uid || ($m === auth.uid && !newData.exists()))",
+            ".validate": "newData.val() === true && (newData.parent().parent().child('type').val() !== 'direct' || $c.beginsWith($m + '_') || $c.endsWith('_' + $m))"
+          }
+        },
+        "$other": { ".validate": false }
+      }
+    },
     "messages": {
-      "$chatId": {
-        ".read": "auth != null && ($chatId.beginsWith(auth.uid + '_') || $chatId.endsWith('_' + auth.uid))",
-        "$msgId": {
-          ".write": "auth != null && !data.exists() && $chatId.matches(/^[A-Za-z0-9]+_[A-Za-z0-9]+$/) && $chatId !== auth.uid + '_' + auth.uid && ($chatId.beginsWith(auth.uid + '_') || $chatId.endsWith('_' + auth.uid))",
-          ".validate": "newData.hasChildren(['from', 'type', 'createdAt']) && ((newData.child('type').val() === 'text' && newData.hasChild('text')) || (newData.child('type').val() === 'location' && newData.hasChild('location')))",
-          "from":      { ".validate": "newData.val() === auth.uid" },
-          "type":      { ".validate": "newData.val() === 'text' || newData.val() === 'location'" },
-          "createdAt": { ".validate": "newData.val() === now" },
-          "text": { ".validate": "newData.isString() && newData.val().length <= 1000 && !newData.val().matches(/^\\s*$/)" },
-          "location": {
-            ".validate": "newData.hasChildren(['lat', 'lng'])",
-            "lat": { ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90" },
-            "lng": { ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180" },
+      "$c": {
+        ".read": "auth != null && root.child('conversations').child($c).child('members').child(auth.uid).exists()",
+        "$m": {
+          ".write": "auth != null && !data.exists() && (root.child('conversations').child($c).child('members').child(auth.uid).exists() || newData.parent().parent().parent().child('conversations').child($c).child('members').child(auth.uid).exists())",
+          ".validate": "newData.hasChildren(['senderId', 'type', 'createdAt']) && (newData.child('recalled').val() === true || (newData.child('type').val() === 'text' && newData.hasChild('text')) || (newData.child('type').val() === 'location' && newData.hasChildren(['lat', 'lng'])) || (newData.child('type').val() === 'image' && newData.hasChild('imageUrl')) || (newData.child('type').val() === 'system' && newData.hasChild('text')))",
+          "senderId":  { ".validate": "data.exists() ? newData.val() === data.val() : newData.val() === auth.uid" },
+          "type":      { ".validate": "data.exists() ? newData.val() === data.val() : (newData.val() === 'text' || newData.val() === 'location' || newData.val() === 'image' || newData.val() === 'system')" },
+          "createdAt": { ".validate": "data.exists() ? newData.val() === data.val() : newData.val() === now" },
+          "text": {
+            ".write": "auth != null && data.parent().child('senderId').val() === auth.uid && !newData.exists()",
+            ".validate": "newData.isString() && newData.val().length <= 1000 && !newData.val().matches(/^\\s*$/)"
+          },
+          "imageUrl": {
+            ".write": "auth != null && data.parent().child('senderId').val() === auth.uid && !newData.exists()",
+            ".validate": "newData.isString() && newData.val().beginsWith('https://res.cloudinary.com/') && newData.val().length <= 500"
+          },
+          "lat": {
+            ".write": "auth != null && data.parent().child('senderId').val() === auth.uid && !newData.exists()",
+            ".validate": "newData.isNumber() && newData.val() >= -90 && newData.val() <= 90"
+          },
+          "lng": {
+            ".write": "auth != null && data.parent().child('senderId').val() === auth.uid && !newData.exists()",
+            ".validate": "newData.isNumber() && newData.val() >= -180 && newData.val() <= 180"
+          },
+          "recalled": {
+            ".write": "auth != null && data.parent().child('senderId').val() === auth.uid",
+            ".validate": "newData.val() === true"
+          },
+          "replyTo": {
+            ".validate": "newData.hasChildren(['id', 'senderId', 'preview'])",
+            "id":       { ".validate": "newData.isString()" },
+            "senderId": { ".validate": "newData.isString()" },
+            "preview":  { ".validate": "newData.isString() && newData.val().length <= 200" },
             "$other": { ".validate": false }
+          },
+          "reactions": {
+            "$uid": {
+              ".write": "auth != null && $uid === auth.uid && data.parent().parent().exists() && data.parent().parent().child('recalled').val() !== true && root.child('conversations').child($c).child('members').child(auth.uid).exists()",
+              ".validate": "newData.val() === '👍' || newData.val() === '❤️' || newData.val() === '😂' || newData.val() === '😮' || newData.val() === '😢'"
+            }
           },
           "$other": { ".validate": false }
         }
@@ -44,16 +92,60 @@
     "userChats": {
       "$uid": {
         ".read": "auth != null && auth.uid === $uid",
-        "$peerUid": {
-          ".write": "auth != null && $uid !== $peerUid && newData.exists() && (auth.uid === $uid || auth.uid === $peerUid)",
-          "lastMessage": { ".validate": "newData.isString() && newData.val().length <= 1000" },
-          "lastTime":    { ".validate": "newData.val() === now" },
-          "lastFrom":    { ".validate": "newData.val() === auth.uid" },
+        "$c": {
+          ".write": "auth != null && ((newData.exists() && newData.parent().parent().parent().child('conversations').child($c).child('members').child($uid).exists() && (auth.uid === $uid || ((root.child('conversations').child($c).child('members').child(auth.uid).exists() || newData.parent().parent().parent().child('conversations').child($c).child('members').child(auth.uid).exists()) && newData.child('lastSenderId').val() === auth.uid))) || (!newData.exists() && (auth.uid === $uid || root.child('conversations').child($c).child('createdBy').val() === auth.uid)))",
+          ".validate": "newData.hasChildren(['lastMessage', 'lastType', 'lastSenderId', 'lastMessageId', 'updatedAt'])",
+          "lastMessage":   { ".validate": "newData.isString() && newData.val().length <= 1000" },
+          "lastType":      { ".validate": "newData.val() === 'text' || newData.val() === 'location' || newData.val() === 'image' || newData.val() === 'system' || newData.val() === 'recalled'" },
+          "lastSenderId":  { ".validate": "newData.val() === auth.uid || newData.val() === data.val()" },
+          "lastMessageId": { ".validate": "newData.isString()" },
+          "updatedAt":     { ".validate": "newData.val() === now || newData.val() === data.val()" },
           "unread": {
             ".validate": "newData.isNumber() && (auth.uid === $uid ? newData.val() === 0 : newData.val() === (data.exists() ? data.val() : 0) + 1)"
           },
           "$other": { ".validate": false }
         }
+      }
+    },
+    "readStatus": {
+      "$c": {
+        ".read": "auth != null && root.child('conversations').child($c).child('members').child(auth.uid).exists()",
+        "$uid": {
+          ".write": "auth != null && $uid === auth.uid && root.child('conversations').child($c).child('members').child(auth.uid).exists()",
+          ".validate": "newData.val() === now"
+        }
+      }
+    },
+    "typing": {
+      "$c": {
+        ".read": "auth != null && root.child('conversations').child($c).child('members').child(auth.uid).exists()",
+        "$uid": {
+          ".write": "auth != null && $uid === auth.uid && root.child('conversations').child($c).child('members').child(auth.uid).exists()",
+          ".validate": "newData.val() === true"
+        }
+      }
+    },
+    "notifications": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        "$id": {
+          ".write": "auth != null && (auth.uid === $uid || (newData.exists() && newData.child('fromUid').val() === auth.uid && newData.parent().parent().parent().child('conversations').child(newData.child('convId').val()).child('members').child(auth.uid).exists() && newData.parent().parent().parent().child('conversations').child(newData.child('convId').val()).child('members').child($uid).exists()))",
+          ".validate": "newData.hasChildren(['type', 'convId', 'fromUid', 'text', 'createdAt', 'read'])",
+          "type":      { ".validate": "newData.val() === 'message' || newData.val() === 'group_added' || newData.val() === 'reaction'" },
+          "convId":    { ".validate": "newData.isString()" },
+          "fromUid":   { ".validate": "newData.isString()" },
+          "text":      { ".validate": "newData.isString() && newData.val().length <= 1000" },
+          "createdAt": { ".validate": "newData.val() === now || newData.val() === data.val()" },
+          "read":      { ".validate": "newData.isBoolean() && (auth.uid === $uid || newData.val() === false)" },
+          "$other": { ".validate": false }
+        }
+      }
+    },
+    "activeConv": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid === $uid",
+        ".validate": "newData.isString() && newData.val().length <= 128"
       }
     }
   }

@@ -4,6 +4,9 @@ import { useAuth } from '../context/AuthContext';
 import { LoginScreen } from '../features/auth/LoginScreen';
 import { RegisterScreen } from '../features/auth/RegisterScreen';
 import { ChatDetailScreen } from '../features/chats/ChatDetailScreen';
+import { CreateGroupScreen } from '../features/groups/CreateGroupScreen';
+import { GroupInfoScreen } from '../features/groups/GroupInfoScreen';
+import { EditProfileScreen } from '../features/settings/EditProfileScreen';
 import { colors } from '../theme';
 import { MainTabs } from './MainTabs';
 import type { RootStackParamList } from './types';
@@ -34,6 +37,21 @@ export function RootNavigator() {
           <Stack.Screen
             name="ChatDetail"
             component={ChatDetailScreen}
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="CreateGroup"
+            component={CreateGroupScreen}
+            options={{ animation: 'slide_from_bottom' }}
+          />
+          <Stack.Screen
+            name="GroupInfo"
+            component={GroupInfoScreen}
+            options={{ animation: 'slide_from_right' }}
+          />
+          <Stack.Screen
+            name="EditProfile"
+            component={EditProfileScreen}
             options={{ animation: 'slide_from_right' }}
           />
         </>

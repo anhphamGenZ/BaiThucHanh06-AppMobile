@@ -7,8 +7,10 @@ import { InsetSeparator } from '../../components/InsetSeparator';
 import { ScreenHeader } from '../../components/ScreenHeader';
 import { SearchBar } from '../../components/SearchBar';
 import { SkeletonList } from '../../components/SkeletonList';
+import { useAuth } from '../../context/AuthContext';
 import { useChat } from '../../context/ChatContext';
 import type { MainTabScreenProps } from '../../navigation/types';
+import { directPeerOf, getDirectId } from '../../services/chatService';
 import { colors, spacing, typography } from '../../theme';
 import type { User } from '../../types/models';
 import { INDEX_LETTERS, indexLetter } from '../../utils/names';
@@ -23,15 +25,23 @@ type ContactSection = {
 
 export function ContactsScreen({ navigation }: MainTabScreenProps<'Contacts'>) {
   const { users, usersLoaded, conversations } = useChat();
+  const myId = useAuth().me?.id;
   const [keyword, setKeyword] = useState('');
 
   const onlineCount = users.filter(u => u.isOnline).length;
   const query = keyword.trim().toLowerCase();
 
-  const unreadByPeer = useMemo(
-    () => new Map(conversations.map(c => [c.peerId, c.unread])),
-    [conversations],
-  );
+  // Số tin chưa đọc theo từng người (chỉ chat 1-1), để hiện badge cạnh tên trong Danh bạ.
+  const unreadByPeer = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const chat of conversations) {
+      const peerId = myId ? directPeerOf(chat.convId, myId) : null;
+      if (peerId) {
+        map.set(peerId, chat.unread);
+      }
+    }
+    return map;
+  }, [conversations, myId]);
 
   // Nhóm theo chữ cái đầu của tên (Đ riêng, ký tự lạ vào '#'), nhóm xếp A→Z.
   const sections = useMemo(() => {
@@ -64,9 +74,17 @@ export function ContactsScreen({ navigation }: MainTabScreenProps<'Contacts'>) {
 
   const matchedCount = sections.reduce((sum, s) => sum + s.data.length, 0);
 
+  // Mở chat 1-1: mã cuộc trò chuyện tính cố định từ hai uid.
   const openChat = useCallback(
-    (peerId: string) => navigation.navigate('ChatDetail', { peerId }),
-    [navigation],
+    (peerId: string) => {
+      if (myId) {
+        navigation.navigate('ChatDetail', {
+          convId: getDirectId(myId, peerId),
+          peerId,
+        });
+      }
+    },
+    [navigation, myId],
   );
 
   return (

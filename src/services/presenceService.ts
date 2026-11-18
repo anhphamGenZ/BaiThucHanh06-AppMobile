@@ -1,9 +1,8 @@
 import {
-  goOffline,
-  goOnline,
   onDisconnect,
   onValue,
   ref,
+  remove,
   serverTimestamp,
   set,
 } from 'firebase/database';
@@ -39,12 +38,31 @@ export function setOffline(uid: string): Promise<void> {
   return set(statusRef(uid), offlineValue());
 }
 
-export function pauseConnection(): void {
-  goOffline(db);
+// Ghi online lại khi app quay về tiền cảnh. Kết nối không bị ngắt nên onDisconnect vẫn còn hiệu lực.
+export function setOnline(uid: string): Promise<void> {
+  return set(statusRef(uid), { online: true, lastChanged: serverTimestamp() });
 }
 
-export function resumeConnection(): void {
-  goOnline(db);
+// activeConv/{uid} = cuộc trò chuyện đang mở, để người gửi biết có cần tạo thông báo không.
+// Ghi lại mỗi lần kết nối lại, vì onDisconnect đã xoá nó khi app ngắt kết nối.
+export function trackActiveConv(uid: string, convId: string): Unsubscribe {
+  const target = ref(db, 'activeConv/' + uid);
+  const off = onValue(ref(db, '.info/connected'), snap => {
+    if (snap.val() !== true) {
+      return;
+    }
+    onDisconnect(target)
+      .remove()
+      .then(() => set(target, convId))
+      .catch(() => {});
+  });
+  return () => {
+    off();
+    remove(target).catch(() => {});
+    onDisconnect(target)
+      .cancel()
+      .catch(() => {});
+  };
 }
 
 export function subscribeStatuses(

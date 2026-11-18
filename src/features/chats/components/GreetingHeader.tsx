@@ -54,7 +54,14 @@ export function GreetingHeader({
         hitSlop={6}
         onPress={onPressProfile}
       >
-        <Avatar name={me.name} seed={me.id} size={44} online={online} pulse />
+        <Avatar
+          name={me.name}
+          seed={me.id}
+          uri={me.avatarUrl}
+          size={44}
+          online={online}
+          pulse
+        />
       </PressableScale>
     </View>
   );

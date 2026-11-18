@@ -4,19 +4,24 @@ import { colors, spacing, typography } from '../../../theme';
 import type { AppNotification } from '../../../types/models';
 import { formatTime } from '../../../utils/formatTime';
 
+// Icon theo loại thông báo: tin nhắn, được thêm vào nhóm, cảm xúc.
 const TYPE_ICON: Record<AppNotification['type'], IconName> = {
   message: 'chat',
-  friend: 'userPlus',
-  system: 'info',
+  group_added: 'userPlus',
+  reaction: 'activity',
 };
 
 type NotificationItemProps = {
   notification: AppNotification;
+  // Câu hiển thị đã ghép sẵn tên người gửi/tên nhóm (NotificationsScreen làm).
+  content: string;
   onPress: () => void;
 };
 
+// Một dòng thông báo: chưa đọc thì nền teal nhạt, chữ đậm và có chấm xanh.
 export function NotificationItem({
   notification,
+  content,
   onPress,
 }: NotificationItemProps) {
   const { read } = notification;
@@ -24,6 +29,8 @@ export function NotificationItem({
   return (
     <TouchableOpacity
       activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={`${content}, ${read ? 'đã đọc' : 'chưa đọc'}`}
       style={[
         styles.row,
         { backgroundColor: read ? colors.card : colors.primarySoft },
@@ -47,7 +54,7 @@ export function NotificationItem({
           numberOfLines={2}
           style={read ? typography.bodyMuted : styles.contentUnread}
         >
-          {notification.content}
+          {content}
         </Text>
         <Text style={styles.meta}>
           {`${formatTime(notification.createdAt)} · ${

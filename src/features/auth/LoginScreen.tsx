@@ -83,7 +83,11 @@ export function LoginScreen({ navigation }: RootStackScreenProps<'Login'>) {
         onSubmitEditing={handleLogin}
       />
       <AuthFormError message={formError} />
-      <AuthButton label="Đăng nhập" loading={submitting} onPress={handleLogin} />
+      <AuthButton
+        label="Đăng nhập"
+        loading={submitting}
+        onPress={handleLogin}
+      />
       <AuthSwitchLink
         prompt="Chưa có tài khoản?"
         action="Đăng ký"

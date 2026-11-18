@@ -49,6 +49,7 @@ export const ContactItem = memo(function ContactRow({
       <Avatar
         name={user.name}
         seed={user.id}
+        uri={user.avatarUrl}
         size={46}
         online={user.isOnline}
         pulse={user.isOnline}

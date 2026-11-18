@@ -42,7 +42,9 @@ export async function logout(uid: string): Promise<void> {
   await signOut(auth);
 }
 
-export function subscribeAuth(cb: (user: AuthUser | null) => void): Unsubscribe {
+export function subscribeAuth(
+  cb: (user: AuthUser | null) => void,
+): Unsubscribe {
   return onAuthStateChanged(auth, user =>
     cb(user ? { uid: user.uid, email: user.email } : null),
   );

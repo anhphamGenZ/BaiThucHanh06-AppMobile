@@ -17,7 +17,14 @@ type AccountCardProps = {
 export function AccountCard({ me, online }: AccountCardProps) {
   return (
     <View style={styles.card}>
-      <Avatar name={me.name} seed={me.id} size={80} online={online} pulse />
+      <Avatar
+        name={me.name}
+        seed={me.id}
+        uri={me.avatarUrl}
+        size={80}
+        online={online}
+        pulse
+      />
       <Text style={styles.name}>{me.name}</Text>
       <Text style={typography.bodyMuted}>{me.email}</Text>
       <View style={[styles.pill, online ? styles.pillOn : styles.pillOff]}>
