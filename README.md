@@ -1,258 +1,126 @@
-# Bài thực hành 05 - Chat 1-1 realtime với Firebase (React Native)
+# Bài thực hành 06 - Chat nâng cao với Firebase và Cloudinary (React Native)
 
-Sinh viên: **Phạm Đức Anh** - PTIT, Công nghệ phần mềm. Mã học phần RIPT1412-20261-02.
+Em chào thầy, em là **Phạm Đức Anh**, sinh viên PTIT ngành Công nghệ phần mềm, mã học phần RIPT1412-20261-02. Em xin gửi thầy bài thực hành 06.
 
-Phát triển tiếp ứng dụng chat của Bài 4 bằng React Native CLI (không dùng Expo). Dữ liệu mẫu được thay bằng dữ liệu thời gian thực trên Firebase (Authentication Email/Password và Realtime Database) để hai người dùng nhắn tin trực tiếp với nhau.
+Trong bài này, em phát triển tiếp app chat của Bài 5 (React Native CLI 0.87, TypeScript, Firebase JS SDK 13, React Navigation 7). Em bổ sung chat nhóm, gửi ảnh, trạng thái "đang soạn tin" và "đã xem", thu hồi tin và cảm xúc. Màn Thông báo em chuyển sang dữ liệu thật, và em làm thêm 5 mục nâng cao của Phần C.
 
-- Dự án Firebase: `chat-realtime-1-1`, Realtime Database ở `asia-southeast1`.
-- Quy ước giao diện: xem `DESIGN.md`.
+- Em dùng dự án Firebase riêng: `chat-nang-cao-th06` (Realtime Database ở `asia-southeast1`). Bài 5 dùng dự án khác nên không bị ảnh hưởng.
+- Cloudinary: cloud `cdzfxgll`, unsigned preset `chat_th06_unsigned`, ảnh lưu trong thư mục `chat-th06`.
+- Quy ước giao diện em ghi trong `DESIGN.md`. Báo cáo luật bảo mật (Word, 1 trang): [`docs/bao-cao-security-rules-bai06.docx`](docs/bao-cao-security-rules-bai06.docx).
 
-## Minh chứng các màn hình
+## Chức năng theo đề
 
-Ảnh chụp từ máy ảo Android (Pixel 8 Pro, Android 16), lưu trong `docs/screenshots/bai05/`. Người dùng khác trong ảnh là các tài khoản thật trên Firebase do script thử nghiệm đăng nhập và gửi tin; chỉ có một máy ảo chạy ứng dụng.
+| Mục | Nội dung | Vị trí mã |
+|---|---|---|
+| A1. Trạng thái trong chat | "đang soạn tin…" tự tắt sau 3 giây, khi gửi và khi rời màn hình; "Đã gửi" / "Đã xem HH:mm" (nhóm: "Đã xem bởi N người"); "Hoạt động X phút trước"; `onDisconnect()` cho typing và online | `hooks/useTypingSignal.ts`, `services/typingService.ts`, `presenceService.ts`, `ChatHeader.tsx`, `ChatDetailScreen.tsx` |
+| A2. Thu hồi và cảm xúc | Nhấn giữ: Sao chép, Thu hồi (tin của mình), 👍 ❤️ 😂 😮 😢. Thu hồi ghi `recalled: true`, không xoá node; tin cuối bị thu hồi thì Home cũng đổi. Cảm xúc gom theo emoji kèm số lượng | `MessageActionsSheet.tsx`, `ReactionSummary.tsx`, `chatService.recallMessage/toggleReaction` |
+| A3. Gửi ảnh | Nút 📷: chụp ảnh hoặc chọn thư viện, xin quyền camera, thu nhỏ cạnh dài ≤ 1024px, upload unsigned lên Cloudinary, chỉ lưu URL. Bong bóng tạm có loading và nút "Thử lại"; nhấn ảnh xem toàn màn hình; Home hiện "📷 Hình ảnh" / "📍 Vị trí" | `services/uploadService.ts`, `imagePickerService.ts`, `PendingImageBubble.tsx`, `ImageViewerModal.tsx` |
+| A4. Chat nhóm | Màn Tạo nhóm (tên + chọn ≥ 2 người), tên người gửi trên bong bóng, tiêu đề "N đang online", Home gộp 1-1 và nhóm theo tin mới nhất, số chưa đọc riêng từng người; nhóm gửi được chữ, vị trí, ảnh | `features/groups/CreateGroupScreen.tsx`, `services/groupService.ts`, `HomeScreen.tsx` |
+| A5. Thông báo thật | `notifications/{uid}` khi có tin mới (gộp một thông báo cho mỗi cuộc trò chuyện, bỏ qua người đang mở chat đó), khi được thêm vào nhóm, khi có người thả cảm xúc. Badge tab, nhấn để mở đúng chat, "Đánh dấu tất cả đã đọc" | `services/notificationService.ts`, `context/NotificationContext.tsx`, `NotificationsScreen.tsx` |
+| B. Kỹ thuật | Tin + `lastMessage` + `unread` trong **một** `update()` nhiều đường dẫn, `increment(1)`; tải theo trang `limitToLast(20)` + `endBefore`; code Firebase/Cloudinary trong `src/services/`; huỷ mọi listener trong cleanup; không có API secret | `services/*`, `database.rules.json` |
+| C1. Quản trị nhóm | Đổi tên, thêm/xoá thành viên (trưởng nhóm), rời nhóm; mỗi thao tác có tin hệ thống | `features/groups/GroupInfoScreen.tsx`, `groupService.ts` |
+| C2. Trả lời trích dẫn | "Trả lời" trong menu nhấn giữ; nhấn trích dẫn thì tải thêm trang (nếu cần) và cuộn tới tin gốc | `ReplyPreview.tsx`, `MessageBubble.tsx`, `ChatDetailScreen.tsx` |
+| C3. Hồ sơ cá nhân | Đổi họ tên và ảnh đại diện (Cloudinary), cập nhật ngay ở Danh bạ, Home, Chat | `features/settings/EditProfileScreen.tsx`, `userService.updateProfile`, `Avatar.tsx` |
+| C4. Thông báo cục bộ | `@notifee/react-native`: app ở nền mà có thông báo mới thì hiện thông báo hệ thống, nhấn vào mở đúng chat | `services/localNotificationService.ts`, `index.js`, `NotificationContext.tsx` |
+| C5. Tìm tin nhắn | Ô tìm trong tiêu đề chat, không phân biệt dấu và hoa thường ("xin chao" ra "Xin chào"), nhấn kết quả để cuộn tới tin | `MessageSearchBar.tsx`, `utils/textSearch.ts` |
 
-### 1. Đăng ký
+## Cấu trúc Realtime Database
 
-Họ tên, email, mật khẩu (tối thiểu 6 ký tự) và nhập lại mật khẩu. Lỗi hiện ngay dưới từng ô; lỗi từ Firebase (email đã dùng...) hiện ở khung đỏ phía trên nút. Đăng ký xong thì Firebase tự đăng nhập và vào Home.
+```text
+users/{uid}                  { name, avatarUrl? }
+status/{uid}                 { online, lastChanged }
+conversations/{convId}       { type: "direct"|"group", name?, members: {uid: true}, createdBy, createdAt }
+messages/{convId}/{msgId}    { senderId, type: "text"|"image"|"location"|"system", text?, imageUrl?, lat?, lng?,
+                               createdAt, recalled?, reactions?: {uid: emoji}, replyTo?: {id, senderId, preview} }
+userChats/{uid}/{convId}     { lastMessage, lastType, lastSenderId, lastMessageId, updatedAt, unread }
+readStatus/{convId}/{uid}    thời điểm đọc cuối
+typing/{convId}/{uid}        true
+activeConv/{uid}             convId đang mở (để không tạo thông báo cho người đang xem)
+notifications/{uid}/{id}     { type: "message"|"group_added"|"reaction", convId, fromUid, text, createdAt, read }
+```
 
-<img src="docs/screenshots/bai05/01-register.png" width="260" alt="Màn đăng ký" />
+- Chat 1-1 dùng mã cố định `sort(uidA, uidB).join('_')`; lần đầu mở chat thì tạo `conversations/{id}`. Nhóm dùng mã `push()`.
+- Thông báo tin mới có id cố định `msg_{convId}`: tin sau ghi đè nội dung và đặt lại `read: false`, nên mỗi cuộc trò chuyện chỉ có một thông báo.
 
-### 2. Home có số tin chưa đọc
+## Cấu hình Firebase
 
-Thẻ tổng số tin chưa đọc, dải "Đang hoạt động", chip lọc Tất cả / Chưa đọc / Online. Mỗi dòng có ảnh đại diện, tên, tin cuối, thời gian; cuộc trò chuyện mới nhất nằm trên cùng. Số chưa đọc tăng ngay khi có tin và về 0 khi mở cuộc trò chuyện.
+Nếu thầy muốn chạy trên một dự án Firebase khác, thầy làm theo các bước sau:
 
-<img src="docs/screenshots/bai05/02-home-unread.png" width="260" alt="Home có số chưa đọc" />
+1. Tạo dự án trên [Firebase Console](https://console.firebase.google.com), thêm một **Web app** và chép đoạn cấu hình.
+2. **Authentication → Sign-in method**: bật **Email/Password**.
+3. **Realtime Database → Create database** (chọn khu vực, ví dụ `asia-southeast1`).
+4. Dán cấu hình vào `src/services/firebase.ts` (nhớ có `databaseURL`). Đây là cấu hình công khai của Web app; dữ liệu được bảo vệ bằng Authentication và Rules.
+5. Sửa `.firebaserc` thành mã dự án của thầy, rồi deploy luật:
 
-### 3. Danh bạ có trạng thái online
+```sh
+npx firebase-tools login
+npx firebase-tools deploy --only database --project chat-nang-cao-th06
+```
 
-Danh sách người dùng đã đăng ký (không gồm bản thân), sắp xếp theo tên A đến Z và chia nhóm theo chữ cái đầu như danh bạ điện thoại. Chấm xanh và chữ "Đang hoạt động" cập nhật theo thời gian thực; người offline hiện "Hoạt động ... trước" hoặc "Ngoại tuyến". Có ô tìm kiếm theo tên, nhấn một người để mở chat.
+## Cấu hình Cloudinary
 
-<img src="docs/screenshots/bai05/03-contacts-online.png" width="260" alt="Danh bạ có trạng thái online" />
+1. Đăng nhập [Cloudinary](https://console.cloudinary.com), ghi lại **Cloud name**.
+2. **Settings → Upload → Upload presets → Add upload preset**: Signing mode **Unsigned**, asset folder `chat-th06`.
+3. Sửa `src/config/cloudinary.ts`: `cloudName` và `uploadPreset`.
 
-### 4. Chat có tin thường và tin vị trí
-
-Tin của mình bên phải, của người kia bên trái, mỗi tin có giờ. Ô trống hoặc chỉ có dấu cách thì nút Gửi bị vô hiệu. Danh sách tự cuộn tới tin mới nhất. Thanh tiêu đề hiện tên và trạng thái online. Nút 📍 xin quyền vị trí (từ chối thì hiện thông báo) rồi gửi một thẻ vị trí; nhấn vào thẻ thì mở Google Maps đúng toạ độ.
-
-| Chat có tin thường và thẻ vị trí                                           | Nhấn thẻ vị trí mở Google Maps                                      |
-| -------------------------------------------------------------------------- | ------------------------------------------------------------------- |
-| <img src="docs/screenshots/bai05/04-chat-text-location.png" width="260" /> | <img src="docs/screenshots/bai05/07-google-maps.png" width="260" /> |
-
-Máy ảo đặt vị trí cố định tại 122 Hoàng Quốc Việt (21.046461, 105.792206), nên thẻ ra `21.04646, 105.79220` và Google Maps mở đúng điểm đó.
-
-### Phần nộp bài người dùng tự bổ sung
-
-- Ảnh Firebase Console, Realtime Database, tab Data cho thấy dữ liệu tin nhắn (`messages`, `userChats`, `status`, `users`).
-- Video 1 đến 2 phút quay hai máy ảo hoặc thiết bị chat với nhau.
+Em upload ảnh bằng `fetch` multipart tới `https://api.cloudinary.com/v1_1/{cloudName}/image/upload` kèm `upload_preset`. Em **không dùng và không lưu API key hay API secret** trong mã nguồn.
 
 ## Chạy ứng dụng
 
-Yêu cầu: Node 22.11 trở lên (theo `engines` trong `package.json`), Android Studio với ít nhất một máy ảo (nên dùng hình ảnh có Google Play để có Google Maps).
+Để chạy app, thầy cần Node 22.11 trở lên và Android Studio có máy ảo (nên dùng image có Google Play).
 
 ```sh
 npm install
 npm start
-# mở terminal khác, máy ảo Android đang bật
+# terminal khác, máy ảo đang bật
 npm run android
 ```
 
-Cấu hình Firebase (Web app) nằm trong `src/services/firebase.ts`. Đây là cấu hình công khai của ứng dụng Web; việc bảo vệ dữ liệu dựa vào Authentication và Rules bên dưới.
+Bài này có thêm gói native (`react-native-image-picker`, `@react-native-clipboard/clipboard`, `@notifee/react-native`), nên thầy cần build lại bằng `npm run android`; chỉ reload Metro là không đủ.
 
-### Chạy với hai máy ảo
+Nếu thầy chạy nhiều máy ảo: bật từng máy (`emulator -avd <tên>`), rồi với mỗi máy chạy `adb -s <serial> reverse tcp:8081 tcp:8081` và `npm run android -- --device <serial>`. Máy ảo không có GPS thật, nên thầy đặt toạ độ trước khi gửi vị trí: `adb -s <serial> emu geo fix 105.792206 21.046461`.
 
-```sh
-emulator -list-avds
-emulator -avd <tên_avd_1>
-emulator -avd <tên_avd_2>
-adb devices
-# với mỗi máy: nối Metro và cài ứng dụng
-adb -s <serial> reverse tcp:8081 tcp:8081
-npm run android -- --deviceId <serial>
-```
-
-Đăng ký hai tài khoản trên hai máy rồi nhắn tin cho nhau.
-
-### Đặt vị trí máy ảo
-
-Máy ảo không có GPS thật. Đặt toạ độ rồi mới bấm 📍 (kinh độ trước, vĩ độ sau):
-
-```sh
-adb -s <serial> emu geo fix 105.792206 21.046461
-```
-
-Nếu thẻ vị trí đầu tiên vẫn ra toạ độ mặc định của máy ảo (37.42200, -122.08400) thì gửi lại một lần nữa.
-
-### Tài khoản thử nghiệm
-
-Các tài khoản tạo sẵn để có danh bạ đầy đủ: `user1@gmail.com` đến `user30@gmail.com`, mật khẩu `12345678` (tên hiển thị `user2` đến `user20`, riêng `user21` đến `user30` dùng tên tiếng Việt như Anh Tuấn, Bảo Ngọc, Minh Quân). Có thể đăng ký tài khoản riêng bằng màn Đăng ký.
-
-## Chức năng theo đề
-
-| Mục                    | Nội dung                                                                                                                                                                  | Vị trí mã                                                                                                    |
-| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| 1. Đăng ký / Đăng nhập | Đăng ký (họ tên, email, mật khẩu, nhập lại), đăng nhập, thông báo lỗi tiếng Việt, đăng xuất ở Cài đặt, giữ phiên khi mở lại app                                           | `src/features/auth`, `src/context/AuthContext.tsx`, `src/services/authService.ts`                            |
-| 2. Danh bạ             | Danh sách người dùng (không gồm bản thân), online/offline realtime, tìm kiếm, mở chat                                                                                     | `src/features/contacts`, `src/context/ChatContext.tsx`, `src/services/userService.ts`, `presenceService.ts` |
-| 3. Chat 1-1            | Gửi và nhận tức thì, phải/trái, có giờ, chặn tin rỗng, tự cuộn, tiêu đề tên và online                                                                                     | `src/features/chats/ChatDetailScreen.tsx`, `src/services/chatService.ts`                                     |
-| 4. Gửi vị trí          | Nút 📍, xin quyền, thông báo khi từ chối, thẻ vị trí, mở Google Maps                                                                                                      | `src/services/locationService.ts`, `MessageBubble.tsx`, `MessageInput.tsx`                                   |
-| 5. Home                | Danh sách cuộc trò chuyện, mới nhất trên cùng, số chưa đọc tăng ngay và về 0 khi mở chat                                                                                  | `src/features/chats/HomeScreen.tsx`, `userChats` trong RTDB                                                  |
-| 6. Kỹ thuật            | React Native CLI, React Navigation, Firebase JS SDK, `@react-native-community/geolocation`, code Firebase gom trong `src/services/`, hủy listener trong cleanup của `useEffect` | `src/services/*`, `ChatDetailScreen.tsx`                                                                     |
-| Thông báo              | Giữ như Bài 4 (dữ liệu mẫu cục bộ)                                                                                                                                        | `src/features/notifications`, `src/data/notifications.ts`                                                    |
-
-Trạng thái trực tuyến: khi đăng nhập app ghi `status/{uid}` và đăng ký `onDisconnect` để server tự ghi offline khi mất kết nối. Ứng dụng ở nền quá 5 giây thì ngắt kết nối (`goOffline`) để bạn bè thấy offline; quay lại thì nối lại. Công tắc "Hiển thị trạng thái online" ở Cài đặt được lưu trên máy và giữ sau khi khởi động lại.
-
-## Cấu trúc thư mục
-
-```text
-src/
-  services/     firebase.ts, authService, userService, presenceService, chatService, locationService
-  context/      AuthContext, ChatContext, NotificationContext
-  navigation/   RootNavigator, MainTabs, types
-  features/     auth, chats, contacts, notifications, settings
-  components/   Avatar, SearchBar, ScreenHeader, EmptyState, Icon và các thành phần giao diện dùng chung
-  hooks/ utils/ theme/ types/ data/
-database.rules.json   luật bảo mật Realtime Database
-firebase.json, .firebaserc
-```
-
-## Cấu trúc Realtime Database và luật bảo mật
-
-`chatId = [uidA, uidB].sort().join('_')`
-
-```text
-users/{uid}                      { name }
-status/{uid}                     { online, lastChanged }
-messages/{chatId}/{pushId}       { from, type: 'text' | 'location', text | location{lat,lng}, createdAt }
-userChats/{uid}/{peerUid}        { lastMessage, lastTime, lastFrom, unread }
-```
-
-Luật trong `database.rules.json`:
-
-- Chỉ người đã đăng nhập mới đọc được `users` và `status`; mỗi người chỉ ghi được hồ sơ và trạng thái của chính mình. Email không lưu trong Realtime Database.
-- `messages/{chatId}` chỉ hai người trong cuộc trò chuyện đọc được; chỉ được thêm tin mới (không sửa hay xóa tin cũ), `from` phải là chính người gửi, `createdAt` là giờ server, tin chữ không rỗng và tối đa 1000 ký tự.
-- `userChats/{uid}` chỉ chủ sở hữu đọc được. Chủ sở hữu chỉ đặt `unread` về 0; người gửi chỉ tăng `unread` của người nhận thêm đúng 1 (dùng `increment(1)`).
-- Mỗi lần gửi là một `update()` nhiều đường dẫn: tin nhắn, hai bản ghi `userChats` và `unread` của người nhận thành công cùng lúc hoặc thất bại cùng lúc.
-
-### Deploy luật
-
-```sh
-npx -y firebase-tools@latest deploy --only database --project chat-realtime-1-1
-```
-
-Nếu mạng không dùng được IPv6 thì lệnh có thể báo hết thời gian kết nối; thử lại với `NODE_OPTIONS="--dns-result-order=ipv4first --no-network-family-autoselection"`.
+Tài khoản thử: thầy có thể dùng các tài khoản mẫu em đã đăng ký trên dự án, mỗi máy ảo một tài khoản, hoặc đăng ký thêm ở màn Đăng ký.
 
 ## Kiểm tra mã
 
 ```sh
 npx tsc --noEmit
-npm run lint
+npx eslint src __tests__ App.tsx index.js
 npm test
 ```
 
-`npm test` chỉ chạy một bài kiểm tra render cơ bản; `jest.setup.js` giả lập Firebase, AsyncStorage, geolocation và các service để bài kiểm tra không mở kết nối mạng.
+`npm test` chạy bài kiểm tra render cơ bản; `jest.setup.js` giả lập Firebase, các service và các gói native để không mở kết nối mạng. (Thư mục `component/` là bài tập cũ của em, không thuộc app.)
+
+## Minh chứng
+
+Em chụp ảnh từ máy ảo Android 16 (Pixel 7: Nguyễn An, Pixel 8 Pro: Trần Bình) và lưu trong `docs/screenshots/bai06/`. Kết quả kiểm thử chi tiết em để trong [`docs/bao-cao-kiem-thu-bai06.md`](docs/bao-cao-kiem-thu-bai06.md).
+
+| Đang soạn tin và Đã xem | Thu hồi và cảm xúc | Tin ảnh |
+|---|---|---|
+| <img src="docs/screenshots/bai06/01-dang-soan-tin-da-xem.png" width="240" /> | <img src="docs/screenshots/bai06/02-thu-hoi-cam-xuc.png" width="240" /> | <img src="docs/screenshots/bai06/03-tin-anh.png" width="240" /> |
+
+| Tạo nhóm | Chat nhóm có tên người gửi | Thông báo có badge |
+|---|---|---|
+| <img src="docs/screenshots/bai06/04-tao-nhom.png" width="240" /> | <img src="docs/screenshots/bai06/05-chat-nhom-ten-nguoi-gui.png" width="240" /> | <img src="docs/screenshots/bai06/06-thong-bao-badge.png" width="240" /> |
+
+Ảnh bổ sung:
+- Gửi ảnh: lỗi mạng có nút "Thử lại" (`03a`), đang gửi (`03c`), xem toàn màn hình (`03b`).
+- Thông báo: đánh dấu tất cả đã đọc (`06b`).
+- Quản trị nhóm có tin hệ thống (`07`), màn Thông tin nhóm (`08`).
+- Menu nhấn giữ (`09`), tìm kiếm không dấu (`10`), thông báo hệ thống notifee (`11`).
+- Thao tác trái phép bị từ chối với lỗi `PERMISSION_DENIED` (`12`).
+
+Ảnh Firebase Console (tab Data với `conversations` và `userChats`, tab Rules) em chụp bổ sung. Bằng chứng `PERMISSION_DENIED` nằm trong [báo cáo luật (Word)](docs/bao-cao-security-rules-bai06.docx).
 
 ## Giới hạn đã biết
 
-- Chưa kiểm tra và chưa build trên iOS; `Info.plist` đã có mô tả quyền vị trí.
-- Thông báo vẫn dùng dữ liệu mẫu như Bài 4.
-- Tin nhắn không có xóa, sửa hay ảnh; mỗi cuộc trò chuyện chỉ tải 200 tin gần nhất.
+Em xin nêu một số giới hạn của bài:
 
----
+- Thông báo cục bộ (notifee) chỉ hiện khi tiến trình app còn sống ở nền. Em không dùng FCM và Cloud Functions (gói Spark), nên app bị tắt hẳn thì không nhận được. Để nhận được thông báo khi ở nền, app ghi trạng thái offline sau 5 giây ở nền nhưng vẫn giữ kết nối, thay vì ngắt kết nối như Bài 5.
+- Rules không đếm được số phần tử, nên "nhóm tối thiểu 3 người" em kiểm tra ở app (màn Tạo nhóm), không kiểm tra trong rules.
+- `activeConv` được đọc ngay trước khi gửi, nên có thể lệch nếu người nhận vừa rời màn hình đúng lúc đó.
+- Tìm kiếm tải toàn bộ tin của một cuộc trò chuyện một lần; cách này phù hợp với quy mô bài thực hành.
+- Em chưa build và kiểm tra trên iOS.
 
-# Hướng dẫn mặc định của React Native
-
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
-
-# Getting Started
-
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
-
-## Step 1: Start Metro
-
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
-
-To start the Metro dev server, run the following command from the root of your React Native project:
-
-```sh
-# Using npm
-npm start
-
-# OR using Yarn
-yarn start
-```
-
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
-```
-
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
-```
-
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
-
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
-
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+Em cảm ơn thầy đã đọc bài.

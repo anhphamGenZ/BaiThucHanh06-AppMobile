@@ -23,6 +23,6 @@ Giá trị cụ thể nằm trong `src/theme/index.ts`; component chỉ lấy m�
 - Danh bạ: sắp xếp A→Z, nhóm theo chữ cái đầu (Đ riêng, ký tự lạ vào `#`), tiêu đề nhóm dính khi cuộn.
 - Dòng chưa đọc: nền `primaryMist`, tên đậm, `UnreadBadge`.
 - Online: chấm xanh trên avatar; `pulse` chỉ dùng ở vài chỗ (header, dải Đang hoạt động, ChatHeader).
-- Tin nhắn vị trí: icon `mapPin` kèm "Đã chia sẻ vị trí", không dùng emoji.
+- Tin nhắn vị trí trong chat: thẻ bản đồ có icon `mapPin`. Dòng tin cuối ở Home dùng đúng chuỗi đề bài yêu cầu: "📍 Vị trí", "📷 Hình ảnh".
 - Tìm kiếm: ô pill, đoạn khớp tô bằng `HighlightText`. Đang tải dùng `SkeletonList`, danh sách rỗng dùng `EmptyState`.
 - Vùng chạm tối thiểu 44×44; nút chỉ có icon phải có `accessibilityLabel`.
